@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -30,6 +32,8 @@ type LogConfig struct {
 }
 
 func MustLoad() *Config {
+	_ = godotenv.Load()
+
 	cfg := &Config{
 		HTTP: HTTPConfig{
 			Port: getEnv("HTTP_PORT", "8080"),
