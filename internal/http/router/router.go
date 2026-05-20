@@ -20,7 +20,10 @@ func New(subscriptionService service.SubscriptionProvider) *gin.Engine {
 	subscriptions := r.Group("/subscriptions")
 	{
 		subscriptions.POST("", subscriptionHandler.Create)
+		subscriptions.GET("", subscriptionHandler.List)
 		subscriptions.GET("/:id", subscriptionHandler.GetByID)
+		subscriptions.PUT("/:id", subscriptionHandler.Update)
+		subscriptions.DELETE("/:id", subscriptionHandler.Delete)
 	}
 
 	return r
