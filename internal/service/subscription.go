@@ -10,6 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type SubscriptionProvider interface {
+	Create(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error)
+	GetByID(ctx context.Context, id int64) (domain.Subscription, error)
+	List(ctx context.Context, filter repository.SubscriptionFilter) ([]domain.Subscription, error)
+	Update(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error)
+	Delete(ctx context.Context, id int64) error
+}
+
 type SubscriptionService struct {
 	repo repository.SubscriptionRepository
 }
@@ -17,6 +25,8 @@ type SubscriptionService struct {
 func NewSubscriptionService(repo repository.SubscriptionRepository) *SubscriptionService {
 	return &SubscriptionService{repo: repo}
 }
+
+var _ SubscriptionProvider = (*SubscriptionService)(nil)
 
 func (s *SubscriptionService) Create(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error) {
 	subscription = normalizeSubscription(subscription)
