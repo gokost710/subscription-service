@@ -16,6 +16,7 @@ type SubscriptionProvider interface {
 	List(ctx context.Context, filter repository.SubscriptionFilter) ([]domain.Subscription, error)
 	Update(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error)
 	Delete(ctx context.Context, id int64) error
+	TotalPrice(ctx context.Context, filter repository.SubscriptionSummaryFilter) (int, error)
 }
 
 type SubscriptionService struct {
@@ -72,6 +73,15 @@ func (s *SubscriptionService) Delete(ctx context.Context, id int64) error {
 	return s.repo.Delete(ctx, id)
 }
 
+func (s *SubscriptionService) TotalPrice(ctx context.Context, filter repository.SubscriptionSummaryFilter) (int, error) {
+	filter = normalizeSummaryFilter(filter)
+	if err := validateSummaryFilter(filter); err != nil {
+		return 0, err
+	}
+
+	return s.repo.TotalPrice(ctx, filter)
+}
+
 func normalizeSubscription(subscription domain.Subscription) domain.Subscription {
 	subscription.ServiceName = strings.TrimSpace(subscription.ServiceName)
 
@@ -79,6 +89,19 @@ func normalizeSubscription(subscription domain.Subscription) domain.Subscription
 }
 
 func normalizeFilter(filter repository.SubscriptionFilter) repository.SubscriptionFilter {
+	if filter.ServiceName != nil {
+		serviceName := strings.TrimSpace(*filter.ServiceName)
+		if serviceName == "" {
+			filter.ServiceName = nil
+		} else {
+			filter.ServiceName = &serviceName
+		}
+	}
+
+	return filter
+}
+
+func normalizeSummaryFilter(filter repository.SubscriptionSummaryFilter) repository.SubscriptionSummaryFilter {
 	if filter.ServiceName != nil {
 		serviceName := strings.TrimSpace(*filter.ServiceName)
 		if serviceName == "" {
@@ -110,6 +133,22 @@ func validateSubscription(subscription domain.Subscription) error {
 
 	if subscription.EndDate != nil && subscription.EndDate.Time().Before(subscription.StartDate.Time()) {
 		return fmt.Errorf("%w: end_date must be greater than or equal to start_date", ErrInvalidSubscription)
+	}
+
+	return nil
+}
+
+func validateSummaryFilter(filter repository.SubscriptionSummaryFilter) error {
+	if filter.From.IsZero() {
+		return fmt.Errorf("%w: from is required", ErrInvalidSubscription)
+	}
+
+	if filter.To.IsZero() {
+		return fmt.Errorf("%w: to is required", ErrInvalidSubscription)
+	}
+
+	if filter.To.Before(filter.From) {
+		return fmt.Errorf("%w: to must be greater than or equal to from", ErrInvalidSubscription)
 	}
 
 	return nil
