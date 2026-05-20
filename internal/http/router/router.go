@@ -21,6 +21,7 @@ func New(subscriptionService service.SubscriptionProvider) *gin.Engine {
 	{
 		subscriptions.POST("", subscriptionHandler.Create)
 		subscriptions.GET("", subscriptionHandler.List)
+		subscriptions.GET("/summary", subscriptionHandler.TotalPrice)
 		subscriptions.GET("/:id", subscriptionHandler.GetByID)
 		subscriptions.PUT("/:id", subscriptionHandler.Update)
 		subscriptions.DELETE("/:id", subscriptionHandler.Delete)
