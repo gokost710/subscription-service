@@ -183,6 +183,50 @@ func (r *SubscriptionRepository) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
+func (r *SubscriptionRepository) TotalPrice(ctx context.Context, filter repository.SubscriptionSummaryFilter) (int, error) {
+	query := `
+		WITH matched AS (
+			SELECT
+				price,
+				GREATEST(start_date, $1::date) AS active_from,
+				LEAST(COALESCE(end_date, $2::date), $2::date) AS active_to
+			FROM subscriptions
+			WHERE start_date <= $2::date
+				AND (end_date IS NULL OR end_date >= $1::date)
+	`
+
+	args := []any{filter.From.Time(), filter.To.Time()}
+
+	if filter.UserID != nil {
+		args = append(args, *filter.UserID)
+		query += fmt.Sprintf(" AND user_id = $%d", len(args))
+	}
+
+	if filter.ServiceName != nil {
+		args = append(args, *filter.ServiceName)
+		query += fmt.Sprintf(" AND service_name = $%d", len(args))
+	}
+
+	query += `
+		)
+		SELECT COALESCE(SUM(
+			price * (
+				((EXTRACT(YEAR FROM active_to)::int - EXTRACT(YEAR FROM active_from)::int) * 12)
+				+ (EXTRACT(MONTH FROM active_to)::int - EXTRACT(MONTH FROM active_from)::int)
+				+ 1
+			)
+		), 0)::bigint
+		FROM matched
+	`
+
+	var total int64
+	if err := r.db.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("calculate total subscription price: %w", err)
+	}
+
+	return int(total), nil
+}
+
 type subscriptionScanner interface {
 	Scan(dest ...any) error
 }
