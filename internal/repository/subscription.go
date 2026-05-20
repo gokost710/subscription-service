@@ -14,10 +14,18 @@ type SubscriptionFilter struct {
 	Offset      int
 }
 
+type SubscriptionSummaryFilter struct {
+	From        domain.YearMonth
+	To          domain.YearMonth
+	UserID      *uuid.UUID
+	ServiceName *string
+}
+
 type SubscriptionRepository interface {
 	Create(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error)
 	GetByID(ctx context.Context, id int64) (domain.Subscription, error)
 	List(ctx context.Context, filter SubscriptionFilter) ([]domain.Subscription, error)
 	Update(ctx context.Context, subscription domain.Subscription) (domain.Subscription, error)
 	Delete(ctx context.Context, id int64) error
+	TotalPrice(ctx context.Context, filter SubscriptionSummaryFilter) (int, error)
 }
