@@ -59,6 +59,10 @@ func (ym YearMonth) Month() time.Month {
 	return ym.month
 }
 
+func (ym YearMonth) IsZero() bool {
+	return ym.year == 0 && ym.month == 0
+}
+
 func (ym YearMonth) Time() time.Time {
 	return time.Date(ym.year, ym.month, 1, 0, 0, 0, 0, time.UTC)
 }
