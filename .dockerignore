@@ -1,0 +1,7 @@
+.git
+.idea
+.env
+tmp
+bin
+*.log
+Тестовое задание GO.pdf
