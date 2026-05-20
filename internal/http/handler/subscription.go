@@ -58,6 +58,73 @@ func (h *SubscriptionHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, subscriptionResponseFromDomain(subscription))
 }
 
+func (h *SubscriptionHandler) List(c *gin.Context) {
+	filter, err := subscriptionFilterFromQuery(c)
+	if err != nil {
+		writeError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	subscriptions, err := h.service.List(c.Request.Context(), filter)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+
+	items := make([]subscriptionResponse, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		items = append(items, subscriptionResponseFromDomain(subscription))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"items": items,
+	})
+}
+
+func (h *SubscriptionHandler) Update(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		writeError(c, http.StatusBadRequest, "invalid subscription id")
+		return
+	}
+
+	var request subscriptionRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		writeError(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	subscription, err := request.toDomain()
+	if err != nil {
+		writeError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	subscription.ID = id
+
+	updated, err := h.service.Update(c.Request.Context(), subscription)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, subscriptionResponseFromDomain(updated))
+}
+
+func (h *SubscriptionHandler) Delete(c *gin.Context) {
+	id, err := parseIDParam(c)
+	if err != nil {
+		writeError(c, http.StatusBadRequest, "invalid subscription id")
+		return
+	}
+
+	if err := h.service.Delete(c.Request.Context(), id); err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
 func (h *SubscriptionHandler) writeServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalidSubscription):
@@ -67,6 +134,51 @@ func (h *SubscriptionHandler) writeServiceError(c *gin.Context, err error) {
 	default:
 		writeError(c, http.StatusInternalServerError, "internal server error")
 	}
+}
+
+func subscriptionFilterFromQuery(c *gin.Context) (repository.SubscriptionFilter, error) {
+	var filter repository.SubscriptionFilter
+
+	if value := c.Query("user_id"); value != "" {
+		userID, err := uuid.Parse(value)
+		if err != nil {
+			return repository.SubscriptionFilter{}, err
+		}
+
+		filter.UserID = &userID
+	}
+
+	if value := c.Query("service_name"); value != "" {
+		filter.ServiceName = &value
+	}
+
+	limit, err := intQuery(c, "limit")
+	if err != nil {
+		return repository.SubscriptionFilter{}, err
+	}
+	filter.Limit = limit
+
+	offset, err := intQuery(c, "offset")
+	if err != nil {
+		return repository.SubscriptionFilter{}, err
+	}
+	filter.Offset = offset
+
+	return filter, nil
+}
+
+func intQuery(c *gin.Context, key string) (int, error) {
+	value := c.Query(key)
+	if value == "" {
+		return 0, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+
+	return parsed, nil
 }
 
 type subscriptionRequest struct {
