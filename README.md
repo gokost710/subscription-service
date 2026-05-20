@@ -1,4 +1,4 @@
-# Subscription Service
+# Subscription Service Effective Mobile
 
 REST-сервис для учета онлайн-подписок пользователей.
 
