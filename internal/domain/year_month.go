@@ -63,6 +63,26 @@ func (ym YearMonth) IsZero() bool {
 	return ym.year == 0 && ym.month == 0
 }
 
+func (ym YearMonth) Before(other YearMonth) bool {
+	if ym.year != other.year {
+		return ym.year < other.year
+	}
+
+	return ym.month < other.month
+}
+
+func (ym YearMonth) After(other YearMonth) bool {
+	return other.Before(ym)
+}
+
+func MonthsBetweenInclusive(from YearMonth, to YearMonth) int {
+	if from.IsZero() || to.IsZero() || to.Before(from) {
+		return 0
+	}
+
+	return (to.year-from.year)*12 + int(to.month-from.month) + 1
+}
+
 func (ym YearMonth) Time() time.Time {
 	return time.Date(ym.year, ym.month, 1, 0, 0, 0, 0, time.UTC)
 }
@@ -89,4 +109,20 @@ func (ym *YearMonth) UnmarshalJSON(data []byte) error {
 	*ym = parsed
 
 	return nil
+}
+
+func maxYearMonth(left YearMonth, right YearMonth) YearMonth {
+	if left.Before(right) {
+		return right
+	}
+
+	return left
+}
+
+func minYearMonth(left YearMonth, right YearMonth) YearMonth {
+	if left.After(right) {
+		return right
+	}
+
+	return left
 }

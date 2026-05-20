@@ -125,6 +125,24 @@ func (h *SubscriptionHandler) Delete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func (h *SubscriptionHandler) TotalPrice(c *gin.Context) {
+	filter, err := summaryFilterFromQuery(c)
+	if err != nil {
+		writeError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	totalPrice, err := h.service.TotalPrice(c.Request.Context(), filter)
+	if err != nil {
+		h.writeServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"total_price": totalPrice,
+	})
+}
+
 func (h *SubscriptionHandler) writeServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, service.ErrInvalidSubscription):
@@ -163,6 +181,38 @@ func subscriptionFilterFromQuery(c *gin.Context) (repository.SubscriptionFilter,
 		return repository.SubscriptionFilter{}, err
 	}
 	filter.Offset = offset
+
+	return filter, nil
+}
+
+func summaryFilterFromQuery(c *gin.Context) (repository.SubscriptionSummaryFilter, error) {
+	from, err := domain.ParseYearMonth(c.Query("from"))
+	if err != nil {
+		return repository.SubscriptionSummaryFilter{}, err
+	}
+
+	to, err := domain.ParseYearMonth(c.Query("to"))
+	if err != nil {
+		return repository.SubscriptionSummaryFilter{}, err
+	}
+
+	filter := repository.SubscriptionSummaryFilter{
+		From: from,
+		To:   to,
+	}
+
+	if value := c.Query("user_id"); value != "" {
+		userID, err := uuid.Parse(value)
+		if err != nil {
+			return repository.SubscriptionSummaryFilter{}, err
+		}
+
+		filter.UserID = &userID
+	}
+
+	if value := c.Query("service_name"); value != "" {
+		filter.ServiceName = &value
+	}
 
 	return filter, nil
 }
