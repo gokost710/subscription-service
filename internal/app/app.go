@@ -9,6 +9,8 @@ import (
 
 	"github.com/gokost710/subscription-service/internal/config"
 	"github.com/gokost710/subscription-service/internal/http/router"
+	postgresrepo "github.com/gokost710/subscription-service/internal/repository/postgres"
+	"github.com/gokost710/subscription-service/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,13 +22,16 @@ type App struct {
 }
 
 func New(cfg *config.Config, log *slog.Logger, db *pgxpool.Pool) *App {
+	subscriptionRepo := postgresrepo.NewSubscriptionRepository(db)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
+
 	return &App{
 		cfg: cfg,
 		log: log,
 		db:  db,
 		server: &http.Server{
 			Addr:              cfg.HTTP.Addr(),
-			Handler:           router.New(),
+			Handler:           router.New(subscriptionService),
 			ReadHeaderTimeout: 5 * time.Second,
 		},
 	}
