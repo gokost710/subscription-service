@@ -119,6 +119,18 @@ func TestSubscriptionServiceIDValidation(t *testing.T) {
 	}
 }
 
+func TestSubscriptionServiceTotalPriceValidation(t *testing.T) {
+	svc := NewSubscriptionService(&subscriptionRepositoryMock{})
+
+	_, err := svc.TotalPrice(context.Background(), repository.SubscriptionSummaryFilter{
+		From: mustYearMonth(t, 2025, time.March),
+		To:   mustYearMonth(t, 2025, time.January),
+	})
+	if !errors.Is(err, ErrInvalidSubscription) {
+		t.Fatalf("got error %v, want ErrInvalidSubscription", err)
+	}
+}
+
 func mustYearMonth(t *testing.T, year int, month time.Month) domain.YearMonth {
 	t.Helper()
 
@@ -155,4 +167,8 @@ func (m *subscriptionRepositoryMock) Update(_ context.Context, subscription doma
 
 func (m *subscriptionRepositoryMock) Delete(_ context.Context, _ int64) error {
 	return nil
+}
+
+func (m *subscriptionRepositoryMock) TotalPrice(_ context.Context, _ repository.SubscriptionSummaryFilter) (int, error) {
+	return 0, nil
 }
